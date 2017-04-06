@@ -1,0 +1,12 @@
+<servers>
+	<server>
+		<name>Weblogic12c</name>
+		<driver>com.test</driver>
+		<class>com.ih.utils.WebLogic12cConnector</class>
+	</server>
+	<server>
+		<name>Weblogic</name>
+		<driver>com.test</driver>
+		<class>com.ih.utils.Weblogic</class>
+	</server>	
+</servers>
