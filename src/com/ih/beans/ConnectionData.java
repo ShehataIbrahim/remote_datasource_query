@@ -1,6 +1,7 @@
 package com.ih.beans;
 
 public class ConnectionData {
+    private String connectionName;
     private String serverName;
     private String serverClass;
     private String connectionDriver;
@@ -84,8 +85,6 @@ public class ConnectionData {
             result=false;
         if(isEmptyString(serverIP))
             result=false;
-        if(isEmptyString(connectionDriver))
-            result=false;
         if(isEmptyString(dataSourceJNDI))
             result=false;
         if(isEmptyString(userName))
@@ -96,5 +95,13 @@ public class ConnectionData {
     }
     private boolean isEmptyString(String str) {
         return str==null || str.trim().isEmpty();
+    }
+
+    public void setConnectionName(String connectionName) {
+        this.connectionName = connectionName;
+    }
+
+    public String getConnectionName() {
+        return connectionName;
     }
 }

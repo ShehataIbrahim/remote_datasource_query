@@ -34,6 +34,8 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JEditorPane;
+import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JMenu;
@@ -45,12 +47,15 @@ import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EtchedBorder;
 
+import org.apache.commons.io.output.StringBuilderWriter;
+
 public class QueryForm extends JFrame implements QueryInterface {
 
-private Statement statement=null;
+    private Statement statement = null;
     private static final long serialVersionUID = 7191762624400857868L;
     private JMenuBar jMenuBar1 = new JMenuBar();
     private JMenu mnuFile = new JMenu();
@@ -69,7 +74,7 @@ private Statement statement=null;
     private BorderLayout borderLayout1 = new BorderLayout();
     private JTextArea jTextArea2 = new JTextArea();
     private JScrollPane jScrollPane1 = new JScrollPane();
-    private JTextArea txtResultArea = new JTextArea();
+    private JEditorPane txtResultArea = new JEditorPane();
     private JButton btnExecute = new JButton();
     private JScrollPane jScrollPane2 = new JScrollPane();
     private JTextArea txtQuery = new JTextArea();
@@ -105,8 +110,8 @@ private Statement statement=null;
                 }
             });
         mnuAbout.setText("About");
-        pnlActions.setBounds(new Rectangle(225, 5, 515, 30));
-      
+        pnlActions.setBounds(new Rectangle(225, 0, 515, 35));
+
         btnShowTables.setText("Show Tables");
         btnShowTables.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
@@ -134,7 +139,7 @@ private Statement statement=null;
                 }
             });
         pnlActions.setVisible(false);
-           pnlQuery.setVisible(false);
+        pnlQuery.setVisible(false);
         pnlTables.setVisible(false);
 
         jScrollPane1.setBounds(new Rectangle(10, 90, 500, 395));
@@ -163,6 +168,11 @@ private Statement statement=null;
         pnlTables.add(pnlScrollTable, null);
         this.getContentPane().add(pnlTables, null);
         txtResultArea.setEditable(false);
+        txtResultArea.setContentType("text/html");
+        txtResultArea.setText("</html>\n" +
+                "  </body>\n" +
+                "  </body>\n" +
+                "</html>");
         jScrollPane1.getViewport().add(txtResultArea, null);
         jScrollPane2.getViewport().add(txtQuery, null);
         pnlQuery.add(btnClearResults, null);
@@ -188,7 +198,8 @@ private Statement statement=null;
 
     private void beforeClose() {
         try {
-            statement.close();
+            if (statement != null && !statement.isClosed())
+                statement.close();
         } catch (SQLException e) {
         }
         ConnectionManager.disconnect();
@@ -202,6 +213,13 @@ private Statement statement=null;
     public void notifyConnectionStarted() {
         try {
             statement = ConnectionManager.getConnection().createStatement();
+            SwingUtilities.invokeLater(new Runnable(){
+
+                    public void run() {
+                        pnlQuery.setVisible(true);
+                        
+                    }
+                });
         } catch (SQLException e) {
         }
         SwingUtilities.invokeLater(new Runnable() {
@@ -231,86 +249,145 @@ private Statement statement=null;
     }
 
     private void btnShowSchemas_actionPerformed(ActionEvent e) {
-        try {
-            List<String> schemas = ConnectionManager.getSchemasList();
-            DefaultComboBoxModel<String> model =
-                new DefaultComboBoxModel<String>();
-            for (String sch : schemas)
-                model.addElement(sch);
-            cmbSchemas.setModel(model);
-            
-            SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        cmbSchemas.updateUI();
-                        btnShowSchemas.setVisible(false);
-                        btnShowTables.setVisible(true);
-                        cmbSchemas.setVisible(true);
+        new Thread() {
 
-                    }
-                });
-        } catch (SQLException f) {
-            f.printStackTrace();
-        }
+            @Override
+            public void run() {
+                btnShowSchemas.setEnabled(false);
+                try {
+                    List<String> schemas = ConnectionManager.getSchemasList();
+                    DefaultComboBoxModel<String> model =
+                        new DefaultComboBoxModel<String>();
+                    for (String sch : schemas)
+                        model.addElement(sch);
+                    cmbSchemas.setModel(model);
+
+                    SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                cmbSchemas.updateUI();
+                                btnShowSchemas.setVisible(false);
+                                btnShowTables.setVisible(true);
+                                cmbSchemas.setVisible(true);
+
+                            }
+                        });
+                } catch (SQLException f) {
+                    f.printStackTrace();
+                }
+                btnShowSchemas.setEnabled(true);
+            }
+        }.start();
 
 
     }
 
     private void btnShowTables_actionPerformed(ActionEvent e) {
-        try{
-        List<String> tables = ConnectionManager.getSchemaTables((String)cmbSchemas.getSelectedItem());
-            DefaultListModel<String> listModel=new DefaultListModel<String>();
-            for(String tbl:tables)
-                listModel.addElement(tbl);
-         lstTables.setModel(listModel);
-        SwingUtilities.invokeLater(new Runnable() {
+        new Thread() {
 
-                public void run() {
-                    lstTables.updateUI();
-                    btnShowTables.setVisible(true);
-                    cmbSchemas.setVisible(true);
-                    pnlActions.setVisible(false);
-                    pnlTables.setVisible(true);
-                    pnlTables.setVisible(true);
-                    pnlQuery.setVisible(true);
-                
+            @Override
+            public void run() {
+                btnShowTables.setEnabled(false);
+                try {
+                    List<String> tables =
+                        ConnectionManager.getSchemaTables((String)cmbSchemas.getSelectedItem());
+                    DefaultListModel<String> listModel =
+                        new DefaultListModel<String>();
+                    for (String tbl : tables)
+                        listModel.addElement(tbl);
+                    lstTables.setModel(listModel);
+                    SwingUtilities.invokeLater(new Runnable() {
+
+                            public void run() {
+                                lstTables.updateUI();
+                                btnShowTables.setVisible(true);
+                                cmbSchemas.setVisible(true);
+                                pnlActions.setVisible(false);
+                                pnlTables.setVisible(true);
+                                pnlTables.setVisible(true);
+                                
+
+                            }
+                        });
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
                 }
-            });
-        }catch(SQLException ex) {
-            ex.printStackTrace();
-        }
+                btnShowTables.setEnabled(true);
+            }
+        }.start();
+
     }
 
     private void lstTables_mouseClicked(MouseEvent e) {
-        if(e.getClickCount()==2) {
+        if (e.getClickCount() == 2) {
             txtQuery.append((String)lstTables.getSelectedValue());
         }
-        if(e.getClickCount()>2) {
-            txtQuery.setText("SELECT * FROM "+(String)lstTables.getSelectedValue());
+        if (e.getClickCount() > 2) {
+            txtQuery.setText("SELECT * FROM " +
+                             (String)lstTables.getSelectedValue());
         }
     }
+    StringBuilder currentResults = new StringBuilder();
 
     private void btnExecute_actionPerformed(ActionEvent e) {
-        try {
-            ResultSet result= statement.executeQuery(txtQuery.getText());
-            int colCount=result.getMetaData().getColumnCount();
-            for(int i=1;i<=colCount;i++) {
-                txtResultArea.append(result.getMetaData().getColumnName(i)+"\t");
-            }
-            txtResultArea.append("\n");
-            while(result.next()) {
-                for(int i=1;i<=colCount;i++) {
-                    txtResultArea.append(result.getString(i)+"\t");
+        new Thread(){
+
+            @Override
+            public void run() {
+                btnExecute.setEnabled(false);
+                StringBuilder builder = new StringBuilder();
+
+                try {
+                    ResultSet result = statement.executeQuery(txtQuery.getText());
+                    int colCount = result.getMetaData().getColumnCount();
+                    builder.append("<TABLE border=\"1\" >");
+                    builder.append("<TR style=\"background-color:lightgray;\">");
+                    for (int i = 1; i <= colCount; i++) {
+                        builder.append("<TH>" + result.getMetaData().getColumnName(i) +
+                                       "</TH>\n");
+                    }
+                    builder.append("</TR>");
+                    while (result.next()) {
+                        builder.append("<TR>");
+                        for (int i = 1; i <= colCount; i++) {
+                            builder.append("<TD>" + result.getString(i) + "</TD>");
+                        }
+                        builder.append("</TR>");
+                    }
+                    builder.append("</TABLE>");
+                    currentResults.insert(0, builder.toString());
+                    SwingUtilities.invokeLater(new Runnable() {
+
+                            public void run() {
+
+                                txtResultArea.setText(currentResults.toString());
+                                txtResultArea.updateUI();
+                            }
+                        });
+
+                } catch (SQLException f) {
+                    JOptionPane.showMessageDialog(btnExecute, f.getMessage(),
+                                                  "Execution Error",
+                                                  JOptionPane.ERROR_MESSAGE);
+                    f.printStackTrace();
                 }
-                txtResultArea.append("\n");
+                btnExecute.setEnabled(true);
             }
-        } catch (SQLException f) {
-            JOptionPane.showMessageDialog(btnExecute, f.getMessage(), "Execution Error", JOptionPane.ERROR_MESSAGE);
-            f.printStackTrace();
-        }
+        }.start();
+
     }
 
     private void btnClearResults_actionPerformed(ActionEvent e) {
-        txtResultArea.removeAll();
-        txtResultArea.setText("");
+        currentResults = new StringBuilder("</html>\n" +
+                "  </body>\n" +
+                "  </body>\n" +
+                "</html>");
+        SwingUtilities.invokeLater(new Runnable() {
+
+                public void run() {
+
+                    txtResultArea.setText(currentResults.toString());
+                    txtResultArea.updateUI();
+                }
+            });
     }
 }

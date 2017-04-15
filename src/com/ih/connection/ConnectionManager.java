@@ -24,13 +24,16 @@ public class ConnectionManager {
     }
 
     public static void disconnect() {
+        
         try {
+            if(isConnected())
             currentConnection.rollback();
             
         } catch (SQLException e) {
             e.printStackTrace();
             }finally{
                 try {
+                if(isConnected())    
                     currentConnection.close();
                     
                 } catch (SQLException e) {
@@ -86,6 +89,11 @@ public class ConnectionManager {
         } catch (InstantiationException e) {
             e.printStackTrace();
             result.setMessage("InstantiationException while Creating connector object: " +
+                              e.getMessage());
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.setMessage("Exception while connecting: " +
                               e.getMessage());
             return result;
         }
